@@ -1,0 +1,25 @@
+scheme: Sample Large Cap Fund
+month: 2025-09
+doc_type: factsheet
+
+## Overview
+SAMPLE DATA. Fictional scheme created for development only. Replace with real AMC factsheets.
+Sample Large Cap Fund is an open-ended equity scheme predominantly investing in large cap stocks.
+
+## Expense Ratio
+Total expense ratio as on 30 September 2025: Direct plan 0.85 percent, Regular plan 1.75 percent.
+
+## Exit Load
+An exit load of 1 percent applies if units are redeemed or switched out within 365 days from the date of allotment. No exit load after 365 days.
+
+## Benchmark
+Benchmark index: Sample Nifty 100 TRI.
+
+## Riskometer
+The riskometer rates the scheme as Very High risk.
+
+## Minimum Investment
+Minimum SIP amount is Rs 500. Minimum lump sum is Rs 5,000.
+
+## Top Holdings
+Sample Bank Ltd 9.1 percent, Sample Tech Ltd 7.4 percent, Sample Energy Ltd 6.2 percent.

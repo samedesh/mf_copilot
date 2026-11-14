@@ -1,0 +1,15 @@
+scheme: Sample Flexi Cap Fund
+month: 2025-09
+doc_type: factsheet
+
+## Overview
+SAMPLE DATA. Sample Flexi Cap Fund invests across large, mid and small cap stocks with no fixed allocation.
+
+## Expense Ratio
+Total expense ratio as on 30 September 2025: Direct plan 0.72 percent, Regular plan 1.62 percent.
+
+## Exit Load
+An exit load of 0.5 percent applies if redeemed within 90 days. Nil thereafter.
+
+## Benchmark
+Benchmark index: Sample Nifty 500 TRI.

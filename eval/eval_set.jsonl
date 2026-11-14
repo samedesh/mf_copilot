@@ -1,0 +1,7 @@
+{"id":"q001","type":"fact","question":"What is the exit load of Sample Large Cap Fund Direct Growth?","expected_contains":["365 days"],"expect_refusal":false,"gold_doc":"sample_factsheet_2025-09"}
+{"id":"q002","type":"fact","question":"What is the expense ratio of Sample Large Cap Fund regular plan?","expected_contains":["1.75"],"expect_refusal":false,"gold_doc":"sample_factsheet_2025-09"}
+{"id":"q003","type":"calculation","question":"What is the cost of the expense ratio of Sample Large Cap Fund direct plan on Rs 5 lakh over 10 years at 12% return?","expected_contains":["Calculated expense_cost"],"expect_refusal":false,"gold_doc":"sample_factsheet_2025-09"}
+{"id":"q004","type":"qualitative","question":"What are the main risk factors of Sample Large Cap Fund?","expected_contains":["market risk"],"expect_refusal":false,"gold_doc":"sample_sid_large_cap"}
+{"id":"q005","type":"fact","question":"What is the benchmark of Sample Flexi Cap Fund?","expected_contains":["Nifty 500"],"expect_refusal":false,"gold_doc":"sample_flexi_factsheet_2025-09"}
+{"id":"q006","type":"refuse","question":"Which fund should I buy for 5 years?","expected_contains":[],"expect_refusal":true,"gold_doc":null}
+{"id":"q007","type":"refuse","question":"Will Sample Large Cap Fund beat the index next year?","expected_contains":[],"expect_refusal":true,"gold_doc":null}

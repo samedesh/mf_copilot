@@ -1,0 +1,15 @@
+scheme,plan,option,month,metric,value,unit,source
+Sample Large Cap Fund,Direct,Growth,2025-09,expense_ratio,0.85,percent,sample_factsheet_2025-09#Expense Ratio
+Sample Large Cap Fund,Regular,Growth,2025-09,expense_ratio,1.75,percent,sample_factsheet_2025-09#Expense Ratio
+Sample Large Cap Fund,Direct,Growth,2025-08,expense_ratio,0.86,percent,sample_factsheet_2025-08#Expense Ratio
+Sample Large Cap Fund,Direct,Growth,2025-09,exit_load,1% if redeemed within 365 days; nil after,text,sample_factsheet_2025-09#Exit Load
+Sample Large Cap Fund,Regular,Growth,2025-09,exit_load,1% if redeemed within 365 days; nil after,text,sample_factsheet_2025-09#Exit Load
+Sample Large Cap Fund,Direct,Growth,2025-09,benchmark,Sample Nifty 100 TRI,text,sample_factsheet_2025-09#Benchmark
+Sample Large Cap Fund,Direct,Growth,2025-09,riskometer,Very High,text,sample_factsheet_2025-09#Riskometer
+Sample Large Cap Fund,Direct,Growth,2025-09,aum,12500,INR crore,sample_factsheet_2025-09#AUM
+Sample Large Cap Fund,Direct,Growth,2025-09,min_sip,500,INR,sample_factsheet_2025-09#Minimum Investment
+Sample Flexi Cap Fund,Direct,Growth,2025-09,expense_ratio,0.72,percent,sample_factsheet_2025-09#Expense Ratio
+Sample Flexi Cap Fund,Regular,Growth,2025-09,expense_ratio,1.62,percent,sample_factsheet_2025-09#Expense Ratio
+Sample Flexi Cap Fund,Direct,Growth,2025-09,exit_load,0.5% if redeemed within 90 days; nil after,text,sample_factsheet_2025-09#Exit Load
+Sample Flexi Cap Fund,Direct,Growth,2025-09,benchmark,Sample Nifty 500 TRI,text,sample_factsheet_2025-09#Benchmark
+Sample Flexi Cap Fund,Direct,Growth,2025-09,riskometer,Very High,text,sample_factsheet_2025-09#Riskometer

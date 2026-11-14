@@ -1,0 +1,8 @@
+__pycache__/
+.env
+data/index/
+data/sessions.db
+data/cache/
+logs/
+eval/results*.json
+.pytest_cache/
