@@ -3,14 +3,14 @@ uvicorn[standard]>=0.29
 pydantic>=2.6
 httpx>=0.27
 numpy>=1.26
-rank-bm25>=0.2.2
+python-dotenv>=1.0
+pypdf>=4.0
 diskcache>=5.6
 slowapi>=0.1.9
-pdfplumber>=0.11
 opentelemetry-api>=1.24
 opentelemetry-sdk>=1.24
+opentelemetry-exporter-otlp-proto-http>=1.24
 streamlit>=1.33
 pytest>=8.0
-rank_bm25>=0.2.2
+rank-bm25>=0.2.2
 # Optional (cross-encoder reranker, heavy): pip install sentence-transformers
-# Optional (OTLP/Langfuse export): pip install opentelemetry-exporter-otlp-proto-http

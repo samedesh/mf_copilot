@@ -7,8 +7,8 @@ from app.config import settings
 from app.llm import LLMClient
 from app.schemas import Citation
 
-NOT_FOUND = ("I couldn't find this in the indexed documents, so I won't guess. "
-             "Please check the official factsheet or Scheme Information Document.")
+NOT_FOUND = ("I couldn't find this in the indexed Scheme Information Documents, so I won't guess. "
+             "Please check the official Scheme Information Document (SID).")
 
 
 def citations_from(obs: list[Observation]) -> list[Citation]:
@@ -51,9 +51,13 @@ def compose(question: str, obs: list[Observation], client: LLMClient) -> str:
         return NOT_FOUND
     if settings.llm_mode == "mock":
         return _mock_answer(obs)
-    evidence = json.dumps([o.to_dict() for o in obs if o.ok], default=str)[:6000]
-    msgs = [{"role": "system", "content": "Answer the question using ONLY the evidence. State figures with unit, "
-             "plan/option and period. Show calculation steps for derived numbers. Cite sources as [doc_id]. "
+    evidence = json.dumps([o.to_dict() for o in obs if o.ok], default=str)[:8500]
+    msgs = [{"role": "system", "content":
+             "Answer the question concisely using ONLY the evidence. "
+             "Quote exact figures, units, benchmark names, and durations VERBATIM from the evidence "
+             "(e.g. write '12 months' if evidence says '12 months', '5,000' if evidence says '5,000', 'Nil' if Nil). "
+             "Do not convert units or introduce any number not present in the evidence or question. "
+             "Show calculation steps for derived numbers. Cite sources strictly inside brackets as [doc_id, section]. "
              "If the evidence is insufficient, say so. Never use outside knowledge. Never give advice."},
             {"role": "user", "content": f"Question: {question}\nEvidence: {evidence}"}]
     return client.chat(msgs, max_tokens=500).strip()

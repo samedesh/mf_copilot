@@ -13,5 +13,5 @@ def run(query: str, scheme: str | None = None, top_k: int = 5) -> dict:
         text, n = sanitize_context(h["text"])
         removed += n
         out.append({"doc_id": h["doc_id"], "section": h["section"], "scheme": h["scheme"],
-                    "month": h["month"], "snippet": text[:600], "score": h["score"]})
+                    "month": h["month"], "snippet": text[:1200], "score": h["score"]})
     return {"hits": out, "injection_lines_removed": removed}

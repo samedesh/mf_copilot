@@ -47,6 +47,7 @@ def review(question: str, obs: list[Observation], answer: str, cites: list[Citat
 
     # 2. Every number in the answer must be grounded in evidence or in the question
     body = re.sub(r"\[[^\]]*\]", "", answer)
+    body = re.sub(r"\b(?:page|pages|pg\.?|tier|section|part)\s+\d+(?:\s*[-–]\s*\d+)?\b", "", body, flags=re.I)
     allowed = _numbers(json.dumps([o.to_dict() for o in good], default=str)) + _numbers(question)
     bad = [str(n) for n in _numbers(body)
            if not any(math.isclose(n, a, rel_tol=1e-3, abs_tol=0.01) for a in allowed)]

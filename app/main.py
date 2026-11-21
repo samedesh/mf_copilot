@@ -12,7 +12,7 @@ from app.agent import state
 from app.agent.graph import run_agent
 from app.config import settings
 from app.observability import init_tracing
-from app.rag.ingest import build_index
+from app.rag.retriever import get_retriever
 from app.schemas import ChatRequest, ChatResponse
 
 limiter = Limiter(key_func=get_remote_address)
@@ -22,15 +22,19 @@ cache = diskcache.Cache(str(settings.cache_dir))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_tracing()
-    if not (settings.index_dir / "chunks.json").exists():
+    has_index = (settings.index_dir / "chunks.db").exists() or (settings.index_dir / "chunks.json").exists()
+    if has_index:
         try:
-            print("Index missing; built", build_index(), "chunks")
-        except Exception as e:  # keep the API up; /chat will report the tool error
-            print("Index build failed:", e)
+            get_retriever().load()
+            print("Retriever index preloaded from", settings.index_dir)
+        except Exception as e:
+            print("Index preload failed:", e)
+    else:
+        print("Index missing at", settings.index_dir, "— run offline: python -m app.rag.ingest")
     yield
 
 
-app = FastAPI(title="Mutual Fund Factsheet & SID Q&A Copilot", version="1.0", lifespan=lifespan)
+app = FastAPI(title="Mutual Fund Scheme Information Document (SID) Q&A Copilot", version="1.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

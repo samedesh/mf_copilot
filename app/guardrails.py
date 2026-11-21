@@ -26,9 +26,10 @@ PII_PATTERNS = [
     (r"\b[\w.+-]+@[\w-]+\.[\w.]+\b", "[EMAIL]"),
 ]
 
-REFUSAL_TEXT = ("I can only answer factual questions about scheme documents (exit load, expense ratio, "
-                "benchmark, riskometer, holdings, and similar). I can't give investment advice, "
-                "recommendations or return predictions. Please consult a SEBI-registered advisor.")
+REFUSAL_TEXT = ("I can only answer factual questions about Scheme Information Documents (SIDs) "
+                "(such as investment objective, asset allocation, risk factors, exit load, expense ratio limits, "
+                "benchmark, and riskometer). I can't give investment advice, recommendations or return predictions. "
+                "Please consult a SEBI-registered advisor.")
 
 
 def redact_pii(text: str) -> tuple[str, int]:

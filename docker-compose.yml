@@ -1,11 +1,18 @@
 services:
   api:
+    image: mf-copilot:latest
     build: .
     env_file: .env
+    environment:
+      LLM_CA_CERT: /app/api-key/vm05-ca.crt
+      EMBED_CA_CERT: /app/api-key/VM02_Embeddings_Access/vm02-ca.crt
     ports: ["8000:8000"]
-    volumes: ["./data:/app/data", "./logs:/app/logs"]
+    volumes:
+      - "./data:/app/data"
+      - "./logs:/app/logs"
+      - "../api-key:/app/api-key:ro"
   ui:
-    build: .
+    image: mf-copilot:latest
     command: streamlit run ui/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
     environment: ["API_URL=http://api:8000"]
     ports: ["8501:8501"]

@@ -56,9 +56,11 @@ def test_injection_in_document_not_followed(client):
 
 
 def test_cache_hit(client):
+    import uuid
     q = "What is the benchmark of Sample Flexi Cap Fund?"
-    ask(client, q, "t-c1")
-    assert ask(client, q, "t-c2")["cached"] is True
+    s1, s2 = f"t-c1-{uuid.uuid4().hex[:8]}", f"t-c2-{uuid.uuid4().hex[:8]}"
+    ask(client, q, s1)
+    assert ask(client, q, s2)["cached"] is True
 
 
 def test_loop_detector():
