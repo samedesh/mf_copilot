@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from app.agent import critic, state
 from app.agent.composer import NOT_FOUND, citations_from, compose
 from app.agent.executor import Observation, run_plan
+from app.agent.mock import find_scheme
 from app.agent.planner import make_plan
 from app.budget import Budget
 from app.config import settings
@@ -28,6 +29,7 @@ class AgentResult:
     latency_ms: int = 0
     notes: list[str] = field(default_factory=list)
     unsupported: list[str] = field(default_factory=list)
+    trace_id: str | None = None
 
 
 def run_agent(question: str, session_id: str, strategy: str | None = None, use_memory: bool = True) -> AgentResult:
@@ -35,11 +37,13 @@ def run_agent(question: str, session_id: str, strategy: str | None = None, use_m
     client = LLMClient(budget)
     notes: list[str] = []
 
-    def done(answer, status, cites=None, obs=None, unsupported=None) -> AgentResult:
-        return AgentResult(answer, status, cites or [], obs or [], budget.steps, budget.tool_calls,
-                           budget.tokens, int((time.time() - t0) * 1000), notes, unsupported or [])
+    with span("agent.request", session_id=session_id) as sp:
+        ctx = sp.get_span_context() if hasattr(sp, "get_span_context") else None
+        tid = format(ctx.trace_id, "032x") if ctx and getattr(ctx, "trace_id", None) else None
 
-    with span("agent.request", session_id=session_id):
+        def done(answer, status, cites=None, obs=None, unsupported=None) -> AgentResult:
+            return AgentResult(answer, status, cites or [], obs or [], budget.steps, budget.tool_calls,
+                               budget.tokens, int((time.time() - t0) * 1000), notes, unsupported or [], tid)
         q, n_pii = redact_pii(question)
         if n_pii:
             notes.append(f"{n_pii} sensitive item(s) redacted from your question")
@@ -58,6 +62,12 @@ def run_agent(question: str, session_id: str, strategy: str | None = None, use_m
                 if plan.refuse:
                     notes.append(f"refused by planner: {plan.reason}")
                     return done(REFUSAL_TEXT, "refused")
+                # Enforce scheme filter if scheme is mentioned in the query
+                detected_scheme = find_scheme(q)
+                if detected_scheme:
+                    for step in plan.steps:
+                        if step.tool == "search_scheme_docs" and not step.args.get("scheme"):
+                            step.args["scheme"] = detected_scheme
                 with span("executor", n_steps=len(plan.steps)):
                     obs = run_plan(plan, budget)
                 with span("composer"):

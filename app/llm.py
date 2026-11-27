@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import time
+from pathlib import Path
 
 import httpx
 import numpy as np
@@ -29,6 +30,12 @@ def extract_json(text: str) -> str:
 def _get_client(verify: str | bool, timeout: float) -> httpx.Client:
     """Reuse persistent keep-alive HTTPX clients per CA certificate & timeout."""
     verify_arg: str | bool = verify if verify else True
+    if isinstance(verify_arg, str):
+        try:
+            if not Path(verify_arg).is_file():
+                verify_arg = False
+        except (OSError, PermissionError):
+            verify_arg = False
     key = (verify_arg, timeout)
     client = _CLIENTS.get(key)
     if client is None or client.is_closed:

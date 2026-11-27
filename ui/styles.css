@@ -1,0 +1,266 @@
+/* Custom Styling for Mutual Fund SID Copilot */
+
+/* Top Fixed Header */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+header[data-testid="stHeader"] button,
+header[data-testid="stHeader"] a {
+    pointer-events: auto;
+}
+
+.block-container {
+    padding-top: 2rem !important;
+}
+
+div[class*="st-key-top_fixed_header"],
+div.st-key-top_fixed_header {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background-color: #0e1117;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    padding: 0.6rem 0.2rem 0.6rem 0.2rem;
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(125, 125, 125, 0.2);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+/* Status badge pills */
+.badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    margin-right: 6px;
+}
+
+.badge-answered {
+    background-color: rgba(34, 197, 94, 0.15);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.badge-refused {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.badge-needs_verification {
+    background-color: rgba(249, 115, 22, 0.15);
+    color: #ea580c;
+    border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+.badge-error {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.badge-cached {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+
+/* Citation card styling */
+.citation-card {
+    background-color: rgba(125, 125, 125, 0.05);
+    border-left: 3px solid #3b82f6;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    font-size: 0.88rem;
+}
+
+.citation-header {
+    font-weight: 600;
+    color: #2563eb;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.citation-snippet {
+    color: inherit;
+    opacity: 0.88;
+    line-height: 1.45;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.82rem;
+}
+
+/* Metric chip */
+.metric-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(125, 125, 125, 0.08);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    margin-right: 6px;
+    margin-bottom: 4px;
+    color: inherit;
+    opacity: 0.8;
+}
+
+/* Card container */
+.info-box {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(125, 125, 125, 0.2);
+    background-color: rgba(125, 125, 125, 0.04);
+}
+
+/* Pinned Bottom Container & Unified Box */
+div[data-testid="stBottom"] {
+    background: transparent !important;
+    padding-bottom: 0.5rem !important;
+    z-index: 990 !important;
+}
+
+div[data-testid="stBottomBlockContainer"] {
+    background: transparent !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Unified bottom box tying dropdowns and question input together */
+div.st-key-bottom_pinned_box {
+    background-color: rgba(22, 27, 34, 0.96);
+    border: 1px solid rgba(125, 125, 125, 0.25);
+    border-radius: 12px;
+    padding: 12px 14px 10px 14px;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    margin-bottom: 0.25rem;
+}
+
+/* Styling for both "Choose Mutual Fund" and "Choose Scheme" dropdowns */
+div.st-key-selected_mf_dropdown,
+div.st-key-selected_scheme_dropdown {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+div.st-key-selected_mf_dropdown div[data-testid="stSelectbox"],
+div.st-key-selected_scheme_dropdown div[data-testid="stSelectbox"] {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+div.st-key-selected_mf_dropdown div[data-testid="stSelectbox"] label,
+div.st-key-selected_scheme_dropdown div[data-testid="stSelectbox"] label {
+    display: none !important;
+}
+
+/* Streamlit 1.40+ native Selectbox container & BaseWeb fallback */
+div.st-key-selected_mf_dropdown div[data-testid="stSelectbox"] div:has(> input),
+div.st-key-selected_scheme_dropdown div[data-testid="stSelectbox"] div:has(> input),
+div.st-key-selected_mf_dropdown div[data-testid="stSelectbox"] div:has(> [data-testid="stSelectboxIcon"]),
+div.st-key-selected_scheme_dropdown div[data-testid="stSelectbox"] div:has(> [data-testid="stSelectboxIcon"]),
+div.st-key-selected_mf_dropdown div[data-testid="stSelectbox"] [class*="equpb2c0"],
+div.st-key-selected_scheme_dropdown div[data-testid="stSelectbox"] [class*="equpb2c0"],
+div.st-key-selected_mf_dropdown div[data-baseweb="select"],
+div.st-key-selected_scheme_dropdown div[data-baseweb="select"],
+div.st-key-selected_mf_dropdown div[data-baseweb="select"] > div,
+div.st-key-selected_scheme_dropdown div[data-baseweb="select"] > div {
+    min-height: 44px !important;
+    height: 44px !important;
+    border-radius: 0.5rem !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+div.st-key-selected_mf_dropdown div[data-testid="stSelectbox"] input,
+div.st-key-selected_scheme_dropdown div[data-testid="stSelectbox"] input {
+    height: 100% !important;
+    font-size: 0.92rem !important;
+}
+
+/* Question Input box inside unified bottom box */
+div.st-key-bottom_pinned_box div[data-testid="stChatInput"] {
+    margin-top: 8px !important;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+}
+
+div.st-key-bottom_pinned_box div[data-testid="stChatInput"] > div {
+    border-radius: 0.5rem !important;
+}
+
+/* Sidebar New Chat Button styling */
+div.st-key-sidebar_new_chat button {
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(125, 125, 125, 0.35) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.95rem !important;
+    transition: all 0.2s ease !important;
+}
+
+div.st-key-sidebar_new_chat button:hover {
+    border-color: #3b82f6 !important;
+    color: #3b82f6 !important;
+    background-color: rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Failure Taxonomy Large Modal Dialog Styling */
+div[data-testid="stDialog"] > div,
+div[role="dialog"] {
+    max-width: 85vw !important;
+    width: 85vw !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45) !important;
+}
+
+div[data-testid="stDialog"] div[data-testid="stVerticalBlock"] {
+    max-height: 82vh !important;
+    overflow-y: auto !important;
+}
+
+/* Dividers between tabs on Failure Taxonomy Modal */
+div[data-testid="stDialog"] div[data-baseweb="tab-list"],
+div[role="dialog"] div[data-baseweb="tab-list"],
+div[data-testid="stDialog"] [role="tablist"],
+div[role="dialog"] [role="tablist"] {
+    display: flex !important;
+    align-items: center !important;
+    border-bottom: 1px solid rgba(125, 125, 125, 0.25) !important;
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 1rem !important;
+}
+
+div[data-testid="stDialog"] button[data-baseweb="tab"]:not(:last-child),
+div[role="dialog"] button[data-baseweb="tab"]:not(:last-child),
+div[data-testid="stDialog"] button[role="tab"]:not(:last-child),
+div[role="dialog"] button[role="tab"]:not(:last-child) {
+    border-right: 1.5px solid rgba(125, 125, 125, 0.4) !important;
+    padding-right: 1.25rem !important;
+    margin-right: 1.25rem !important;
+}
+
+div[data-testid="stDialog"] button[data-baseweb="tab"],
+div[role="dialog"] button[data-baseweb="tab"],
+div[data-testid="stDialog"] button[role="tab"],
+div[role="dialog"] button[role="tab"] {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+}

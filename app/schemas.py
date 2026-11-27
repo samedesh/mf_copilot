@@ -24,6 +24,7 @@ class ChatResponse(BaseModel):
     latency_ms: int = 0
     cached: bool = False
     notes: list[str] = []
+    trace_id: str | None = None
 
 
 class PlanStep(BaseModel):

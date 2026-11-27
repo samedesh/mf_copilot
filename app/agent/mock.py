@@ -10,9 +10,19 @@ METRIC_WORDS = [("exit load", "exit_load"), ("expense ratio", "expense_ratio"), 
                 ("aum", "aum"), ("minimum sip", "min_sip"), ("min sip", "min_sip")]
 
 
+AMC_NAMES = sorted([
+    "Axis", "Bandhan", "Bank of India", "BOI AXA", "Baroda BNP Paribas", "Baroda Pioneer", "Baroda",
+    "Birla Sun Life", "BNP Paribas", "Canara Robeco", "Canara", "Daiwa", "DHFL Pramerica",
+    "DSP", "DWS", "ICICI Prudential", "JPMorgan", "Nippon India", "Nippon", "Tata"
+], key=lambda x: -len(x))
+
+
 def find_scheme(text: str) -> str | None:
     t = text.lower()
-    return next((s for s in fund_metrics.schemes() if s.lower() in t), None)
+    sample = next((s for s in fund_metrics.schemes() if s.lower() in t), None)
+    if sample:
+        return sample
+    return next((amc for amc in AMC_NAMES if amc.lower() in t), None)
 
 
 def _amount(q: str) -> float | None:
@@ -34,13 +44,15 @@ def mock_plan(question: str, history: list[dict]) -> Plan:
     years, amt = re.search(r"(\d+)\s*years?", q), _amount(q)
     gross = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:return|p\.?a)", q)
 
-    if scheme and years and amt and ("cost" in q or "expense" in q):
+    is_sample = scheme in fund_metrics.schemes() if scheme else False
+
+    if is_sample and years and amt and ("cost" in q or "expense" in q):
         return Plan(steps=[
             PlanStep(tool="get_fund_metric", args={"scheme": scheme, "metric": "expense_ratio", "plan": plan, "option": option}),
             PlanStep(tool="calculator", args={"op": "expense_cost", "params": {
                 "amount": amt, "expense_pct": "$1.numeric",
                 "gross_return_pct": float(gross.group(1)) if gross else 10.0, "years": int(years.group(1))}})])
-    if scheme and metric:
+    if is_sample and metric:
         return Plan(steps=[PlanStep(tool="get_fund_metric", args={
             "scheme": scheme, "metric": metric, "plan": plan, "option": option})])
     return Plan(steps=[PlanStep(tool="search_scheme_docs", args={"query": question, "scheme": scheme, "top_k": 4})])

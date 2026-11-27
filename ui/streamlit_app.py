@@ -1,229 +1,333 @@
-"""Mutual Fund SID Q&A Copilot — Analytical Research UI (Streamlit)."""
+"""Main entrypoint for the Mutual Fund Scheme Information Document (SID) Q&A Copilot Streamlit Application."""
 from __future__ import annotations
-import html
 import json
-import os
+import sys
 import uuid
 from pathlib import Path
 
-import httpx
+# Ensure project root is on sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import streamlit as st
 
-API = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
-META_PATH = Path(__file__).resolve().parent.parent / "data" / "index" / "meta.json"
+from ui.api_client import (
+    DEFAULT_API_URL,
+    DEFAULT_LANGFUSE_PROJECT_ID,
+    DEFAULT_LANGFUSE_URL,
+    build_langfuse_trace_url,
+    check_api_health,
+    get_api_history,
+    get_available_fund_companies,
+    get_schemes_for_fund_company,
+    get_local_history,
+    send_chat_api,
+    send_chat_direct,
+)
+from ui.components.chat import display_chat_message
+from ui.components.sidebar import render_sidebar
+from ui.components.taxonomy_modal import render_taxonomy_button
 
+# Page Configuration
 st.set_page_config(
-    page_title="MF SID Q&A Copilot",
-    page_icon="📄",
+    page_title="Mutual Fund SID Copilot",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Subtle styling for copilot trust badges, telemetry strip, and evidence cards
-st.markdown(
-    """
-    <style>
-      .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
-      .badge { font-size: 0.78rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; display: inline-block; }
-      .b-ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-      .b-warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
-      .b-refuse { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-      .b-err { background: #fce7f3; color: #9d174d; border: 1px solid #f9a8d4; }
-      .b-cache { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
-      .telemetry { font-size: 0.8rem; color: #475569; margin-top: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0; }
-      .cite-card { background: #f8fafc; border-left: 3px solid #2563eb; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; }
-      .cite-hdr { font-size: 0.82rem; font-weight: 700; color: #1e3a8a; margin-bottom: 4px; }
-      .cite-snip { font-size: 0.83rem; color: #334155; white-space: pre-wrap; }
-      .q-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #2563eb; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Load Custom CSS
+css_path = Path(__file__).parent / "styles.css"
+if css_path.exists():
+    st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
 
 
-def _fetch_health() -> dict | None:
-    try:
-        r = httpx.get(f"{API}/health", timeout=2.5)
-        if r.status_code == 200:
-            return r.json()
-    except httpx.HTTPError:
-        pass
-    return None
+def init_session_state():
+    """Initialize necessary session state keys."""
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = f"sid-{uuid.uuid4().hex[:8]}"
+    if "pending_prompt" not in st.session_state:
+        st.session_state.pending_prompt = None
+    if "exec_mode" not in st.session_state:
+        st.session_state.exec_mode = "FastAPI Backend"
+    if "api_url" not in st.session_state:
+        st.session_state.api_url = DEFAULT_API_URL
+    if "strategy" not in st.session_state:
+        st.session_state.strategy = "structured"
+    if "langfuse_url" not in st.session_state:
+        st.session_state.langfuse_url = DEFAULT_LANGFUSE_URL
+    if "langfuse_project_id" not in st.session_state:
+        st.session_state.langfuse_project_id = DEFAULT_LANGFUSE_PROJECT_ID
+    if "latest_trace_id" not in st.session_state:
+        st.session_state.latest_trace_id = None
 
 
-def _load_index_meta() -> dict | None:
-    try:
-        if META_PATH.exists():
-            return json.loads(META_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        pass
-    return None
+def handle_prompt_select(prompt_text: str):
+    """Callback when a sample prompt is clicked in the sidebar."""
+    st.session_state.pending_prompt = prompt_text
 
 
-def _status_badges(turn: dict) -> str:
-    status = turn.get("status", "answered")
-    pills = []
-    if status == "answered":
-        pills.append('<span class="badge b-ok">✓ Verified by Critic</span>')
-    elif status == "needs_verification":
-        pills.append('<span class="badge b-warn">⚠ Needs Analyst Verification</span>')
-    elif status == "refused":
-        pills.append('<span class="badge b-refuse">🛡 Blocked by Guardrail</span>')
-    else:
-        pills.append('<span class="badge b-err">✕ Endpoint Error</span>')
-
-    if turn.get("cached"):
-        pills.append('<span class="badge b-cache">⚡ Cached (0 ms)</span>')
-    return f'<div class="badge-row">{"".join(pills)}</div>'
+def load_history_if_needed(session_id: str, exec_mode: str, api_url: str):
+    """Load previous conversation history from database or API if local messages list is empty."""
+    if not st.session_state.messages:
+        turns = []
+        if exec_mode == "FastAPI Backend":
+            turns = get_api_history(session_id, api_url=api_url)
+        if not turns:
+            turns = get_local_history(session_id)
+        if turns:
+            st.session_state.messages = [
+                {"role": t["role"], "content": t["content"], "meta": None}
+                for t in turns
+            ]
 
 
-def _ask_api(question: str) -> None:
-    try:
-        with st.spinner("Retrieving SID clauses, executing tools & verifying with critic..."):
-            r = httpx.post(
-                f"{API}/chat",
-                json={"session_id": st.session_state.sid, "question": question},
-                timeout=120,
-            )
-            r.raise_for_status()
-            d = r.json()
-            turn = {
-                "question": question,
-                "answer": d["answer"],
-                "status": d.get("status", "answered"),
-                "citations": d.get("citations", []),
-                "steps": d.get("steps", 0),
-                "tool_calls": d.get("tool_calls", 0),
-                "tokens": d.get("tokens", 0),
-                "latency_ms": d.get("latency_ms", 0),
-                "cached": d.get("cached", False),
-                "notes": d.get("notes", []),
-            }
-    except httpx.HTTPError as e:
-        turn = {
-            "question": question,
-            "answer": f"API request failed: `{e}`",
-            "status": "error",
-            "citations": [],
-            "steps": 0,
-            "tool_calls": 0,
-            "tokens": 0,
-            "latency_ms": 0,
-            "cached": False,
-            "notes": [str(e)],
-        }
-    st.session_state.turns.append(turn)
+def main():
+    init_session_state()
 
-
-st.session_state.setdefault("sid", str(uuid.uuid4())[:8])
-st.session_state.setdefault("turns", [])
-st.session_state.setdefault("pending_q", None)
-
-# ── Sidebar: System Status, Corpus Info, One-Click Demo Queries & Session Controls ──
-with st.sidebar:
-    st.header("📄 SID Research Copilot")
-    st.caption("Evidence-grounded Q&A over SEBI Scheme Information Documents (SIDs).")
-
-    health = _fetch_health()
-    if health:
-        st.success(f"API Online · mode=`{health.get('llm_mode')}` · cap=`{health.get('max_steps')}` steps")
-    else:
-        st.error(f"API Unreachable at `{API}`")
-
-    meta = _load_index_meta()
-    if meta:
-        c1, c2 = st.columns(2)
-        c1.metric("Indexed Docs", f"{meta.get('docs', 0):,}")
-        c2.metric("SID Chunks", f"{meta.get('n', 0):,}")
-
-    st.divider()
-    st.subheader("Quick Sample Queries")
-    SAMPLES = [
-        ("Factual · Exit Load", "What is the exit load of Axis Credit Risk Fund?"),
-        ("Qualitative · Objective", "What is the investment objective of Nippon India ELSS Tax Saver Fund?"),
-        ("Calculator · Expense Drag", "How much does a 1.5% expense ratio cost on Rs 5 lakh over 10 years at 10% gross return?"),
-        ("Guardrail · Advice Refusal", "Which mutual fund should I buy to double my money?"),
-    ]
-    for label, sample_q in SAMPLES:
-        if st.button(label, use_container_width=True, help=sample_q):
-            st.session_state.pending_q = sample_q
-
-    st.divider()
-    st.caption(f"Active Session ID: `{st.session_state.sid}`")
-    if st.button("🔄 New Research Session", use_container_width=True):
-        st.session_state.sid = str(uuid.uuid4())[:8]
-        st.session_state.turns = []
-        st.session_state.pending_q = None
+    def handle_new_chat():
+        st.session_state.session_id = f"sid-{uuid.uuid4().hex[:8]}"
+        st.session_state.messages = []
+        st.session_state.latest_trace_id = None
         st.rerun()
 
-    st.divider()
-    st.caption(
-        "**Compliance Notice:** Answers are strictly grounded in indexed SIDs. "
-        "This tool does not provide SEBI investment advice or return forecasts."
-    )
+    # Sidebar: New Chat button above Example Questions & Regulatory Notice
+    render_sidebar(on_select_prompt=handle_prompt_select, on_new_chat=handle_new_chat)
 
-# ── Main Analytical Q&A Workspace ──
-st.title("📄 Mutual Fund Scheme Information Document (SID) Q&A Copilot")
-st.caption(
-    "Ask factual, qualitative, comparative, or calculation questions about indexed SIDs. "
-    "Follow-up turns retain session context automatically."
-)
+    # Top Fixed Header: Title on Left, Failure Taxonomy & Observability on Right
+    with st.container(key="top_fixed_header"):
+        header_col1, header_col2 = st.columns([6.8, 5.2])
+        with header_col1:
+            st.markdown(
+                """
+                <div style="margin-bottom: 0.2rem;">
+                    <h1 style="margin-bottom: 0.2rem; font-size: 1.85rem; line-height: 1.2;">📈 Mutual Fund SID Q&A Copilot</h1>
+                    <p style="font-size: 0.92rem; opacity: 0.8; margin-top: 0; margin-bottom: 0.2rem;">
+                        SEBI-Compliant Fact Retrieval, Factsheet Metrics & Grounded Reasoning across 500+ Scheme Information Documents.
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.caption(f"Session: `{st.session_state.session_id}`")
 
-if not st.session_state.turns and not st.session_state.pending_q:
-    st.info(
-        "Enter a question below or pick a **Quick Sample Query** from the sidebar to inspect "
-        "grounded SID citations, deterministic tool calculations, critic verification, and guardrails."
-    )
+        with header_col2:
+            tax_col, obs_col = st.columns([1, 1], gap="small")
+            with tax_col:
+                render_taxonomy_button(
+                    langfuse_url=st.session_state.langfuse_url,
+                    langfuse_project_id=st.session_state.langfuse_project_id,
+                )
 
-for idx, turn in enumerate(st.session_state.turns, 1):
-    with st.container(border=True):
-        st.markdown(f'<div class="q-label">Query #{idx}</div>', unsafe_allow_html=True)
-        st.markdown(f"**{turn['question']}**")
-        st.markdown(_status_badges(turn), unsafe_allow_html=True)
-        st.markdown(turn["answer"])
+            with obs_col:
+                # Observability and Tracing Button (popover modal on top right)
+                with st.popover("📊 Observability & Tracing", use_container_width=True):
+                    st.markdown("### 📊 Observability & Tracing")
+                    st.caption("Inspect live OpenTelemetry trace spans, Langfuse telemetry, and runtime configuration.")
 
-        # Compact Agent Telemetry Strip
-        lat_s = turn["latency_ms"] / 1000.0
-        st.markdown(
-            f'<div class="telemetry">'
-            f'⏱ <strong>Latency:</strong> {lat_s:.2f}s &nbsp;|&nbsp; '
-            f'🔧 <strong>Tool Calls:</strong> {turn["tool_calls"]} &nbsp;|&nbsp; '
-            f'🪜 <strong>Steps:</strong> {turn["steps"]} &nbsp;|&nbsp; '
-            f'🪙 <strong>Tokens:</strong> {turn["tokens"]:,}'
-            f'</div>',
-            unsafe_allow_html=True,
+                    # Langfuse Deep-Link
+                    st.markdown(f"**Langfuse Web UI:** [🔗 Open Langfuse Dashboard]({st.session_state.langfuse_url})")
+
+                    if st.session_state.latest_trace_id:
+                        st.markdown(f"**Latest Trace ID:** `{st.session_state.latest_trace_id}`")
+                        trace_url = build_langfuse_trace_url(
+                            st.session_state.latest_trace_id,
+                            base_url=st.session_state.langfuse_url,
+                            project_id=st.session_state.langfuse_project_id,
+                        )
+                        if trace_url:
+                            st.markdown(f"[🔎 View Latest Trace in Langfuse]({trace_url})")
+                    else:
+                        st.info("ℹ️ Ask a question in chat to generate an execution trace.")
+
+                    st.divider()
+
+                    # Telemetry Settings
+                    st.markdown("#### 🧭 Langfuse Settings")
+                    st.session_state.langfuse_url = st.text_input("Langfuse Base URL", value=st.session_state.langfuse_url)
+                    st.session_state.langfuse_project_id = st.text_input("Langfuse Project ID", value=st.session_state.langfuse_project_id)
+
+                    # Export Chat
+                    if st.session_state.messages:
+                        st.divider()
+                        chat_json = json.dumps(st.session_state.messages, indent=2, default=str)
+                        st.download_button(
+                            "📥 Export Chat History (JSON)",
+                            data=chat_json,
+                            file_name=f"chat_{st.session_state.session_id}.json",
+                            mime="application/json",
+                            use_container_width=True,
+                        )
+
+    # Chat Interface
+    load_history_if_needed(st.session_state.session_id, st.session_state.exec_mode, st.session_state.api_url)
+
+    # Show initial guidance if no chat history
+    if not st.session_state.messages:
+        st.info(
+            """
+            👋 **Welcome to the Mutual Fund SID Copilot!**
+            
+            You can ask factual questions regarding mutual fund schemes in India:
+            - **Scheme Information Document (SID) Facts:** Investment objectives, exit loads, benchmark indices, asset allocation, recurring expense limits, riskometer, and minimum investment amounts.
+            - **Factsheet Metrics:** Verified AUM, NAV, and Direct vs. Regular expense ratios.
+            - **Deterministic Financial Calculations:** SIP future values, expense ratio drag, CAGR, and metric differences.
+            
+            *⚠️ Per SEBI regulations, this copilot strictly refuses investment advice, buy/sell recommendations, and return predictions.*
+            """
         )
 
-        # Expandable Retrieved Evidence & Citations Drawer
-        cites = turn.get("citations") or []
-        if cites:
-            with st.expander(f"📚 Sources & Retrieved SID Evidence ({len(cites)})", expanded=False):
-                for c in cites:
-                    doc_id = html.escape(str(c.get("doc_id", "")))
-                    sec = html.escape(str(c.get("section") or "-"))
-                    snip = html.escape(str(c.get("snippet") or ""))
-                    st.markdown(
-                        f'<div class="cite-card">'
-                        f'<div class="cite-hdr">📎 {doc_id} &nbsp;·&nbsp; {sec}</div>'
-                        f'<div class="cite-snip">{snip}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
+    # Display Message History
+    for msg in st.session_state.messages:
+        display_chat_message(
+            role=msg["role"],
+            content=msg["content"],
+            meta=msg.get("meta"),
+            langfuse_url=st.session_state.langfuse_url,
+            langfuse_project_id=st.session_state.langfuse_project_id,
+        )
 
-        # Expandable Critic & Guardrail Audit Notes
-        notes = turn.get("notes") or []
-        if notes:
-            auto_open = turn.get("status") == "needs_verification"
-            with st.expander(f"🔍 Guardrail & Critic Audit Trail ({len(notes)})", expanded=auto_open):
-                for n in notes:
-                    st.markdown(f"- `{n}`")
+    # Callback to synchronize scheme dropdown when AMC selection changes
+    def on_company_dropdown_change():
+        st.session_state.selected_scheme_dropdown = "Choose Scheme"
 
-# Process either a clicked sidebar sample query or typed query
-typed_q = st.chat_input(
-    "Ask about investment objective, asset allocation, exit load, benchmark, risk factors, or expense cost..."
-)
-next_q = st.session_state.pending_q or typed_q
-if next_q:
-    st.session_state.pending_q = None
-    _ask_api(next_q)
-    st.rerun()
+    # Fixed Bottom Area: Unified box holding Dropdowns Row + Question Input Box
+    with st.bottom:
+        with st.container(key="bottom_pinned_box"):
+            col_fund, col_scheme = st.columns([1, 1], gap="small")
+            with col_fund:
+                available_funds = get_available_fund_companies()
+                company_options = ["Choose Mutual Fund"] + available_funds
+                curr_company = st.session_state.get("selected_mf_dropdown", "Choose Mutual Fund")
+                company_idx = company_options.index(curr_company) if curr_company in company_options else 0
+
+                selected_company = st.selectbox(
+                    "Choose Mutual Fund",
+                    options=company_options,
+                    index=company_idx,
+                    label_visibility="collapsed",
+                    key="selected_mf_dropdown",
+                    on_change=on_company_dropdown_change,
+                    help="Filter queries exclusively to this mutual fund company",
+                )
+
+            with col_scheme:
+                # Dynamically retrieve schemes for selected AMC
+                if selected_company and selected_company != "Choose Mutual Fund":
+                    available_schemes = get_schemes_for_fund_company(selected_company)
+                else:
+                    available_schemes = []
+
+                scheme_placeholder = "Choose Scheme" if available_schemes else "Choose Scheme (Select AMC first)"
+                scheme_options = [scheme_placeholder] + available_schemes
+
+                curr_scheme = st.session_state.get("selected_scheme_dropdown")
+                scheme_idx = scheme_options.index(curr_scheme) if curr_scheme in scheme_options else 0
+
+                is_scheme_disabled = (selected_company == "Choose Mutual Fund" or not bool(available_schemes))
+
+                selected_scheme = st.selectbox(
+                    "Choose Scheme",
+                    options=scheme_options,
+                    index=scheme_idx,
+                    label_visibility="collapsed",
+                    key="selected_scheme_dropdown",
+                    disabled=is_scheme_disabled,
+                    help="Filter queries specifically to this mutual fund scheme",
+                )
+
+            chat_query = st.chat_input("Ask a question about a mutual fund Scheme Information Document...")
+
+    # Determine if we have an input from chat box or sidebar prompt click
+    query_to_run = None
+    if st.session_state.pending_prompt:
+        query_to_run = st.session_state.pending_prompt
+        st.session_state.pending_prompt = None
+    elif chat_query:
+        query_to_run = chat_query
+
+    if query_to_run:
+        # Determine scoping: specific scheme takes priority over company
+        if selected_scheme and selected_scheme not in ("Choose Scheme", "Choose Scheme (Select AMC first)"):
+            if selected_scheme.lower() not in query_to_run.lower():
+                prompt_for_agent = f"For {selected_scheme}: {query_to_run}"
+            else:
+                prompt_for_agent = query_to_run
+            display_question = f"**[{selected_scheme}]** {query_to_run}"
+            meta_tag = selected_scheme
+        elif selected_company and selected_company != "Choose Mutual Fund":
+            clean_company = (selected_company.replace(" Mutual Fund", "").replace(" MF", "")).strip()
+            if clean_company.lower() not in query_to_run.lower():
+                prompt_for_agent = f"For {selected_company}: {query_to_run}"
+            else:
+                prompt_for_agent = query_to_run
+            display_question = f"**[{selected_company}]** {query_to_run}"
+            meta_tag = selected_company
+        else:
+            prompt_for_agent = query_to_run
+            display_question = query_to_run
+            meta_tag = None
+
+        # Add user message to history
+        st.session_state.messages.append({
+            "role": "user",
+            "content": display_question,
+            "meta": {"company": meta_tag},
+        })
+        display_chat_message("user", display_question)
+
+        # Execute Copilot
+        with st.spinner("Analyzing Scheme Information Documents & calculating..."):
+            try:
+                if st.session_state.exec_mode == "FastAPI Backend":
+                    try:
+                        resp = send_chat_api(question=prompt_for_agent, session_id=st.session_state.session_id, api_url=st.session_state.api_url)
+                    except Exception as e:
+                        if "connect" in str(e).lower() or "refused" in str(e).lower():
+                            resp = send_chat_direct(question=prompt_for_agent, session_id=st.session_state.session_id, strategy=st.session_state.strategy)
+                        else:
+                            raise
+                else:
+                    resp = send_chat_direct(question=prompt_for_agent, session_id=st.session_state.session_id, strategy=st.session_state.strategy)
+
+                assistant_text = resp.get("answer", "No answer received.")
+                trace_id = resp.get("trace_id")
+                if trace_id:
+                    st.session_state.latest_trace_id = trace_id
+
+                meta = {
+                    "status": resp.get("status", "answered"),
+                    "citations": resp.get("citations", []),
+                    "steps": resp.get("steps", 0),
+                    "tool_calls": resp.get("tool_calls", 0),
+                    "tokens": resp.get("tokens", 0),
+                    "latency_ms": resp.get("latency_ms", 0),
+                    "cached": resp.get("cached", False),
+                    "notes": resp.get("notes", []),
+                    "unsupported": resp.get("unsupported", []),
+                    "trace_id": trace_id,
+                    "observations": resp.get("observations", []),
+                }
+
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": assistant_text,
+                    "meta": meta,
+                })
+            except Exception as e:
+                err_msg = f"Failed to execute query: {e}"
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": f"⚠️ {err_msg}",
+                    "meta": {"status": "error", "latency_ms": 0},
+                })
+
+        # Rerun so message history renders above and the chat input is fresh and ready for the next question
+        st.rerun()
+
+
+if __name__ == "__main__":
+    main()

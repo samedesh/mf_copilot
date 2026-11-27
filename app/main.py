@@ -57,7 +57,8 @@ def chat(request: Request, body: ChatRequest) -> ChatResponse:
 
     res = run_agent(body.question, body.session_id)
     resp = ChatResponse(answer=res.answer, status=res.status, citations=res.citations, steps=res.steps,
-                        tool_calls=res.tool_calls, tokens=res.tokens, latency_ms=res.latency_ms, notes=res.notes)
+                        tool_calls=res.tool_calls, tokens=res.tokens, latency_ms=res.latency_ms, notes=res.notes,
+                        trace_id=res.trace_id)
     state.add_turn(body.session_id, "user", body.question)
     state.add_turn(body.session_id, "assistant", res.answer)
     if first_turn and res.status in ("answered", "refused"):

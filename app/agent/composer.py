@@ -58,6 +58,7 @@ def compose(question: str, obs: list[Observation], client: LLMClient) -> str:
              "(e.g. write '12 months' if evidence says '12 months', '5,000' if evidence says '5,000', 'Nil' if Nil). "
              "Do not convert units or introduce any number not present in the evidence or question. "
              "Show calculation steps for derived numbers. Cite sources strictly inside brackets as [doc_id, section]. "
+             "If comparing multiple schemes or metrics, format the comparison clearly using a Markdown table whenever appropriate. "
              "If the evidence is insufficient, say so. Never use outside knowledge. Never give advice."},
             {"role": "user", "content": f"Question: {question}\nEvidence: {evidence}"}]
     return client.chat(msgs, max_tokens=500).strip()

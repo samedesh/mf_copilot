@@ -13,7 +13,9 @@ services:
       - "../api-key:/app/api-key:ro"
   ui:
     image: mf-copilot:latest
-    command: streamlit run ui/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+    command: streamlit run ui/streamlit_app.py --server.port 8501 --server.address 0.0.0.0 --theme.base=dark
     environment: ["API_URL=http://api:8000"]
+    volumes:
+      - "./data:/app/data:ro"
     ports: ["8501:8501"]
     depends_on: [api]
